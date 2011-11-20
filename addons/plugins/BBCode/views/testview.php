@@ -1,0 +1,1 @@
+THIS IS THE TEST VIEW <?php echo $test; ?>

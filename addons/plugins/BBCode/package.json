@@ -1,0 +1,13 @@
+{
+	"type": "plugin",
+	"name": "BBCode",
+	"description": "Formats BBCode within posts, allowing users to style their text.",
+	"version": "1.0",
+	"author": "esoTalk Team",
+	"author_email": "support@esotalk.org",
+	"author_url": "http://esotalk.org",
+	"license": "GPLv2",
+	"dependencies": {
+		"esoTalk": "1.0.0g1"
+	}
+}
