@@ -2,8 +2,6 @@
 // Copyright 2011 Toby Zerner, Simon Zerner
 // This file is part of esoTalk. Please see the included license file for usage information.
 
-if (!defined("IN_ESOTALK")) exit;
-
 /**
  * Displays the conversation list - a table with each conversation as a row.
  *
@@ -14,8 +12,8 @@ if (!defined("IN_ESOTALK")) exit;
 
 <?php
 // Loop through the conversations and output a table row for each one.
-foreach ($data["results"] as $conversation):
-$this->renderView("conversations/conversation", $data + array("conversation" => $conversation));
+foreach ($conversations as $conversation):
+echo View::make('conversations/conversation', compact('conversation'));
 endforeach;
 
 ?></ul>

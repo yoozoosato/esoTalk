@@ -14,7 +14,7 @@
 <?php echo Page::get_head(); ?>
 </head>
 
-<body>
+<body class="<?php echo Page::get_body_class(); ?>">
 
 <div id="messages">
 <?php foreach (Page::get_flash() as $message): ?>
@@ -42,7 +42,7 @@
 
 <ul id="userMenu" class="menu">
 <?php echo Menu::get_user(); ?>
-<li><?php HTML::link('conversation/start', 'New Conversation', array('class' => 'link-newConversation button')); ?></li>
+<li><?php echo HTML::link('conversation/start', 'New Conversation', array('class' => 'link-newConversation button')); ?></li>
 </ul>
 
 </div>

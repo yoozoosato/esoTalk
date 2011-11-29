@@ -1,6 +1,8 @@
 <?php namespace esoTalk;
 
 use Session;
+use Auth;
+use Section;
 
 class Page {
 
@@ -27,7 +29,7 @@ class Page {
 
 	public static function head($val)
 	{
-
+		Section::append('head', $val);
 	}
 
 	public static function get_head()
@@ -47,15 +49,14 @@ class Page {
 		$head .= Asset::container('global')->scripts();
 		$head .= Asset::container('default')->scripts();
 
-		// Output all necessary config variables and language definitions, as well as other variables.
-		// $esoTalkJS = array(
-		// 	"webPath" => ET::$webPath,
-		// 	"userId" => ET::$session->user ? (int)ET::$session->userId : false,
-		// 	"token" => ET::$session->token,
-		// 	"debug" => C("esoTalk.debug"),
-		// 	"language" => $this->jsLanguage
-		// ) + (array)$this->jsData;
-		// $head .= "<script>var ET=".json_encode($esoTalkJS)."</script>";
+		$js = array(
+			'id' => Auth::user()->id,
+			'token' => Session::token(),
+			'debug' => C('esoTalk.debug')
+		) + (array)static::$data;
+		$head .= '<script>var ET='.json_encode($js).'</script>';
+
+		$head .= Section::yield('head');
 
 		return $head;
 	}
@@ -91,6 +92,18 @@ class Page {
 		
 	}
 
+	protected static $body_class = '';
+
+	public static function body_class($class)
+	{
+		static::$body_class .= $class;
+	}
+
+	public static function get_body_class()
+	{
+		return trim(static::$body_class);
+	}
+
 	public static function get_logo()
 	{
 		$logo = C('esoTalk.forum_logo');
@@ -107,7 +120,7 @@ class Page {
 	}
 
 
-	private $messages = array();
+	protected static $messages = array();
 	
 	/**
 	 * Add a message to be displayed on the page. The messages will also be stored in the session so that if the
@@ -133,19 +146,31 @@ class Page {
 
 		if ( ! empty($options["id"]))
 		{
-			$this->messages[$options["id"]] = $options;
+			static::$messages[$options["id"]] = $options;
 		}
 		else
 		{
-			$this->messages[] = $options;
+			static::$messages[] = $options;
 		}
 
-		Session::flash('messages', $this->messages);
+		Session::flash('messages', static::$messages);
 	}
 
 	public static function get_flash()
 	{
-		return Session::get('messages', array());
+		$messages = Session::get('messages', array());
+		
+		Session::forget('messages');
+		
+		return $messages;
+	}
+
+	public static function __callStatic($method, $parameters)
+	{
+		if (substr($method, 0, 6) == 'flash_')
+		{
+			return static::flash($parameters[0], substr($method, 6));
+		}
 	}
 
 }

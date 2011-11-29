@@ -32,17 +32,17 @@ class Member extends Eloquent {
 	/**
 	 * Get the member's channel data.
 	 *
-	 * @return Post
+	 * @return Channel
 	 */
 	public function channels()
 	{
-		return $this->has_and_belongs_to_many('Channel', 'members_channels');
+		return $this->has_many('Member_Channel', 'member_id');
 	}
 
 	/**
 	 * Get the member's conversation data.
 	 *
-	 * @return Post
+	 * @return Conversation
 	 */
 	public function conversations()
 	{
@@ -52,7 +52,7 @@ class Member extends Eloquent {
 	/**
 	 * Get the member's group data.
 	 *
-	 * @return Post
+	 * @return Group
 	 */
 	public function groups()
 	{
@@ -227,6 +227,21 @@ class Member extends Eloquent {
 	public static function register_last_action_type($type, $handler)
 	{
 		static::$last_action_types[$type] = $handler;
+	}
+
+	public function avatar()
+	{
+		
+	}
+
+	public function name()
+	{
+		return $this->username;
+	}
+
+	public function is_admin()
+	{
+		return $this->account == 'administrator';
 	}
 
 	

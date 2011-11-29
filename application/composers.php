@@ -52,10 +52,56 @@ return $composers + array(
 	'layout' => array('name' => 'layout', function($view)
 	{		
 		Asset::container('global')->add('base', 'assets/css/base.css');
+		Asset::container('global')->add('proto', 'addons/skins/Proto/assets/styles.css', 'base');
+
 		Asset::container('global')->add('jquery', 'assets/js/lib/jquery.js');
+		Asset::container('global')->add('jquery.misc', 'assets/js/lib/jquery.misc.js', 'jquery');
+		Asset::container('global')->add('jquery.history', 'assets/js/lib/jquery.history.js', 'jquery');
+		Asset::container('global')->add('jquery.scrollTo', 'assets/js/lib/jquery.scrollTo.js', 'jquery');
 		Asset::container('global')->add('main', 'assets/js/global.js', 'jquery');
 
-		Asset::container('global')->add('proto', 'addons/skins/Proto/assets/styles.css', 'base');
+		if (Auth::guest())
+		{
+			Menu::add_to_user('login', HTML::link_to_login('Log In', null, array('class' => 'link-login')));
+
+			Menu::add_to_user('join', HTML::link_to_join('Sign Up', null, array('class' => 'link-join')));
+		}
+		else
+		{
+			Menu::add_to_user('user', '<a href="'.URL::to_member('me').'">'.Auth::user()->avatar().Auth::user()->name().'</a>');
+
+			Menu::add_to_user('settings', HTML::link_to_settings('Settings'));
+
+			if (Auth::user()->is_admin())
+			{
+				Menu::add_to_user('administration', HTML::link_to_admin('Administration'));
+			}
+
+			Menu::add_to_user('logout', HTML::link('user/logout', 'Log Out', null, array('class' => 'link-logout')));
+		}
+
+		// 	// Fetch all unread notifications so we have a count for the notifications button.
+		// 	$notifications = ET::activityModel()->getNotifications(-1);
+		// 	$count = count($notifications);
+		// 	$this->addToMenu("user", "notifications", "<a href='".URL("settings/notifications")."' id='notifications' class='popupButton ".($count ? "new" : "")."'><span>$count</span></a>");
+
+		// 	// Show messages with these notifications.
+		// 	$this->notificationMessages($notifications);
+
+
+		// // Get the number of members currently online and add it as a statistic.
+		// $online = ET::SQL()
+		// 	->select("COUNT(*)")
+		// 	->from("member")
+		// 	->where("UNIX_TIMESTAMP()-:seconds<lastActionTime")
+		// 	->bind(":seconds", C("esoTalk.userOnlineExpire"))
+		// 	->exec()
+		// 	->result();
+		// $stat = Ts("statistic.online", "statistic.online.plural", number_format($online));
+		// $stat = "<a href='".URL("members/online")."' class='link-membersOnline'>$stat</a>";
+		// $this->addToMenu("statistics", "statistic-online", $stat);
+
+		Menu::add_to_meta('copyright', '<a href="http://esotalk.com/">Powered by esoTalk</a>');
 	})
 
 );

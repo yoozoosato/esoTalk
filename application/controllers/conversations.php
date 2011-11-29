@@ -11,218 +11,250 @@
  */
 class Conversations_Controller extends Base_Controller {
 
+	public $restful = true;
+
 	/**
-	 * Display a list of conversations, optionally filtered by channel(s) and a search string.
+	 * Display a list of conversations, optionally filtered by channel(s)
+	 * and a search string.
 	 *
 	 * @return void
 	 */
-	public function action_index($channelSlug = false)
+	public function get_index($channel_slug = false)
 	{
-		// Add the default gambits to the gambit cloud: gambit text => css class to apply.
+		// Add the default gambits to the gambit cloud. The gambits array
+		// is structured as the gambit text => the CSS class to apply.
+		// Additionally, we can add some more personal gambits if there
+		// is a user logged in.
 		$gambits = array(
-			__("gambit.active_last_?_hours")              => "gambit-activeLastHours",
-			__("gambit.active_last_?_days")               => "gambit-activeLastDays",
-			__("gambit.active_today")                     => "gambit-activeToday",
-			__("gambit.author:").__("gambit.member")      => "gambit-author",
-			__("gambit.contributor:").__("gambit.member") => "gambit-contributor",
-			__("gambit.dead")                             => "gambit-dead",
-			__("gambit.has_replies")                      => "gambit-hasReplies",
-			__("gambit.has_>10_replies")                  => "gambit-replies",
-			__("gambit.locked")                           => "gambit-locked",
-			__("gambit.more_results")                     => "gambit-more",
-			__("gambit.order_by_newest")                  => "gambit-orderByNewest",
-			__("gambit.order_by_replies")                 => "gambit-orderByReplies",
-			__("gambit.random")                           => "gambit-random",
-			__("gambit.reverse")                          => "gambit-reverse",
-			__("gambit.sticky")                           => "gambit-sticky",
+			T('gambit.active_last_?_hours')              => 'gambit-activeLastHours',
+			T('gambit.active_last_?_days')               => 'gambit-activeLastDays',
+			T('gambit.active_today')                     => 'gambit-activeToday',
+			T('gambit.author:').T('gambit.member')       => 'gambit-author',
+			T('gambit.contributor:').T('gambit.member')  => 'gambit-contributor',
+			T('gambit.dead')                             => 'gambit-dead',
+			T('gambit.has_replies')                      => 'gambit-hasReplies',
+			T('gambit.has_>10_replies')                  => 'gambit-replies',
+			T('gambit.locked')                           => 'gambit-locked',
+			T('gambit.more_results')                     => 'gambit-more',
+			T('gambit.order_by_newest')                  => 'gambit-orderByNewest',
+			T('gambit.order_by_replies')                 => 'gambit-orderByReplies',
+			T('gambit.random')                           => 'gambit-random',
+			T('gambit.reverse')                          => 'gambit-reverse',
+			T('gambit.sticky')                           => 'gambit-sticky',
 		);
 
-		// Add some more personal gambits if there is a user logged in.
 		if (Auth::check())
 		{
 			$gambits += array(
-				__("gambit.contributor:").__("gambit.myself") => "gambit-contributorMyself",
-				__("gambit.author:").__("gambit.myself")      => "gambit-authorMyself",
-				__("gambit.draft")                            => "gambit-draft",
-				__("gambit.muted")                            => "gambit-muted",
-				__("gambit.private")                          => "gambit-private",
-				__("gambit.starred")                          => "gambit-starred",
-				__("gambit.unread")                           => "gambit-unread"
+				T('gambit.contributor:').T('gambit.myself')  => 'gambit-contributorMyself',
+				T('gambit.author:').T('gambit.myself')       => 'gambit-authorMyself',
+				T('gambit.draft')                            => 'gambit-draft',
+				T('gambit.muted')                            => 'gambit-muted',
+				T('gambit.private')                          => 'gambit-private',
+				T('gambit.starred')                          => 'gambit-starred',
+				T('gambit.unread')                           => 'gambit-unread'
 			);
 		}
 
-		list($channelInfo, $currentChannels, $channelIds, $includeDescendants) = $this->getSelectedChannels($channelSlug);
+		// Sort out which channels we will be getting conversations from.
+		// We start off by getting a list of all viewable channels. Then,
+		// we get a list of selected channels (i.e. channels listed in the
+		// $channel_slug) and a list of all the channel IDs that we will
+		// get conversation results from (may include descendant channels.)
+		$channels = Channel::with_permission();
 
-		// Now we need to construct some arrays to determine which channel "tabs" to show in the view.
-		// $channels is a list of channels with the same parent as the current selected channel(s).
-		// $path is a breadcrumb trail to the depth of the currently selected channel(s).
-		$channels = array();
-		$path = array();
+		$member_channels = Auth::user()->channels;
 
-		// Work out what channel we will use as the "parent" channel. This will be the last item in $path,
-		// and its children will be in $channels.
-		$curChannel = false;
+		list($selected_channels, $channel_ids, $include_descendants) = $this->get_selected_channels($channels, $channel_slug);
+
+		// Now we need to construct some arrays to determine which channel
+		// 'tabs' to show in the view. $siblings is a list of channels 
+		// with the same parent as the current selected channel(s).
+		// $parents is a breadcrumb trail to the depth of the currently
+		// selected channel(s).
+		$parents = $siblings = array();
+
+		// Work out what channel we will use as the 'parent' channel.
+		// This will be the last item in $parents, and its children will
+		// be in $siblings.
+		$parent = false;
 
 		// If channels have been selected, use the first of them.
-		if (count($currentChannels))
+		if (count($selected_channels))
 		{
-			$curChannel = $channelInfo[$currentChannels[0]];
+			$parent = $channels[$selected_channels[0]];
 		}
 
-		// If the currently selected channel has no children, or if we're not including descendants, use
-		// its parent as the parent channel.
-		if (($curChannel and $curChannel["lft"] >= $curChannel["rgt"] - 1) or !$includeDescendants)
+		// If the currently selected channel has no children, or if we're
+		// not including descendants, use its parent as the parent channel.
+		if (($parent and $parent->lft >= $parent->rgt - 1) or !$include_descendants)
 		{
-			$curChannel = @$channelInfo[$curChannel["parentId"]];
+			$parent = Arr::get($channels, $parent->parent_id);
 		}
 
 		// If no channel is selected, make a faux parent channel.
-		if (!$curChannel)
+		if (!$parent)
 		{
-			$curChannel = array("lft" => 0, "rgt" => PHP_INT_MAX, "depth" => -1);
+			$parent = new Channel;
+			$parent->lft = 0;
+			$parent->rgt = PHP_INT_MAX;
+			$parent->depth = -1;
 		}
 
-		// Now, finally, go through all the channels and add ancestors of the "parent" channel to the $path,
-		// and direct children to the list of $channels. Make sure we don't include any channels which
+		// Now, finally, go through all the channels and add ancestors of
+		// the $parent channel to the $parents, and direct children to the
+		// list of $siblings. Make sure we don't include any channels which
 		// the user has unsubscribed to.
-		foreach ($channelInfo as $channel) {
-			if ($channel["lft"] > $curChannel["lft"] and $channel["rgt"] < $curChannel["rgt"] and $channel["depth"] == $curChannel["depth"] + 1 and empty($channel["unsubscribed"]))
-				$channels[] = $channel;
-			elseif ($channel["lft"] <= $curChannel["lft"] and $channel["rgt"] >= $curChannel["rgt"])
-				$path[] = $channel;
+		$member_channels = Auth::user()->channels;
+
+		foreach ($channels as $channel)
+		{
+			if ($channel->lft > $parent->lft and $channel->rgt < $parent->rgt and $channel->depth == $parent->depth + 1 and empty($member_channels[$channel->id]->unsubscribed))
+			{
+				$siblings[] = $channel;
+			}
+			elseif ($channel->lft <= $parent->lft and $channel->rgt >= $parent->rgt)
+			{
+				$parents[] = $channel;
+			}
 		}
 
 		// Store the currently selected channel in the session, so that it can be automatically selected
 		// if "New conversation" is clicked.
-		if (!empty($currentChannels)) ET::$session->store("channelId", $currentChannels[0]);
+		if (!empty($selected_channels))
+		{
+			Session::put('channel_id', $selected_channels[0]);
+		}
 
 		// Get the search string request value.
-		$searchString = R("search");
+		$search_string = Input::get('search');
 
 		// Last, but definitely not least... perform the search!
-		$search = ET::searchModel();
-		$conversationIDs = $search->getConversationIDs($channelIds, $searchString, count($currentChannels));
-		$results = $search->getResults($conversationIDs);
+		$search = new Search;
+		$conversation_ids = $search->get_conversation_ids($channel_ids, $search_string, count($selected_channels));
+
+		if ($conversation_ids)
+		{
+			$conversations = Conversation::where_in('id', $conversation_ids)->get();
+		}
 
 		// Were there any errors? Show them as messages.
-		if ($search->errorCount()) {
-			$this->messages($search->errors(), "warning dismissable");
+		if ($search->errors)
+		{
+			Page::flash($search->errors, 'warning');
 		}
 
 		// Add fulltext keywords to be highlighted. Make sure we keep ones "in quotes" together.
-		else {
+		else
+		{
 			$words = array();
-			foreach ($search->fulltext as $term) {
-				if (preg_match_all('/"(.+?)"/', $term, $matches)) {
+			foreach ($search->fulltext as $term)
+			{
+				if (preg_match_all('/"(.+?)"/', $term, $matches))
+				{
 					$words[] = $matches[1];
 					$term = preg_replace('/".+?"/', '', $term);
 				}
-				$words = array_unique(array_merge($words, explode(" ", $term)));
+				$words = array_unique(array_merge($words, explode(' ', $term)));
 			}
-			ET::$session->store("highlight", $words);
+			Session::put('highlight', $words);
 		}
 
-		// Pass on a bunch of data to the view.
-		$this->data("results", $results);
-		$this->data("showViewMoreLink", $search->areMoreResults());
-		$this->data("channelPath", $path);
-		$this->data("channelTabs", $channels);
-		$this->data("currentChannels", $currentChannels);
-		$this->data("channelInfo", $channelInfo);
-		$this->data("channelSlug", $channelSlug ? $channelSlug : "all");
-		$this->data("searchString", $searchString);
-		$this->data("fulltextString", implode(" ", $search->fulltext));
-		$this->data("gambits", $gambits);
+		$data = array(
+			'conversations' => $conversations,
+			'show_view_more_link' => $search->more_results,
+			'gambits' => $gambits
+		);
+
+		$data_channels = compact('parents', 'siblings', 'channels', 'selected_channels');
+
+		$channels_view = View::make('channels/tabs', $data_channels);
 
 		// If we're loading the page in full...
-		if ($this->responseType === RESPONSE_TYPE_DEFAULT) {
+		if ( ! Request::ajax()) {
 
 			// Update the user's last action.
-			ET::memberModel()->updateLastAction("search");
+			// Auth::user()->save_last_action('search');
 
 			// Construct a canonical URL and add to the breadcrumb stack.
 			$slugs = array();
-			foreach ($currentChannels as $channel) $slugs[] = $channelInfo[$channel]["slug"];
-			$url = "conversations/".urlencode(($k = implode(" ", $slugs)) ? $k : "all").($searchString ? "?search=".urlencode($searchString) : "");
-			$this->pushNavigation("conversations", "search", URL($url));
-			$this->canonicalURL = URL($url, true);
+			foreach ($selected_channels as $id)
+			{
+				$slugs[] = $channels[$id]->slug;
+			}
+			$slugs = count($slugs) ? implode(' ', $slugs) : 'all';
+			$url = URL::to_conversations(array($slugs, $search_string));
+			Page::navigate('conversations', 'search', $url);
+			Page::canonical_url($url);
 
 			// Add a link to the RSS feed in the bar.
-			$this->addToMenu("meta", "feed", "<a href='".URL(str_replace("conversations/", "conversations/index.atom/", $url))."' id='feed'>".T("Feed")."</a>");
+			// Menu::add_to_meta('feed', HTML::link_to_<a href='".URL(str_replace("conversations/", "conversations/index.atom/", $url))."' id='feed'>".T("Feed")."</a>");
 
 			// Construct a list of keywords to use in the meta tags.
-			$keywords = array();
-			foreach ($channelInfo as $c) {
-				if ($c["depth"] == 0) $keywords[] = strtolower($c["title"]);
-			}
+			// $keywords = array();
+			// foreach ($channelInfo as $c) {
+			// 	if ($c["depth"] == 0) $keywords[] = strtolower($c["title"]);
+			// }
 
-			// Add meta tags to the header.
-			$this->addToHead("<meta name='keywords' content='".sanitizeHTML(($k = C("esoTalk.meta.keywords")) ? $k : implode(",", $keywords))."'>");
-			list($lastKeyword) = array_splice($keywords, count($keywords) - 1, 1);
-			$this->addToHead("<meta name='description' content='".sanitizeHTML(($d = C("esoTalk.meta.description")) ? $d
-				: sprintf(T("forumDescription"), C("esoTalk.forumTitle"), implode(", ", $keywords), $lastKeyword))."'>");
+			// // Add meta tags to the header.
+			// $this->addToHead("<meta name='keywords' content='".sanitizeHTML(($k = C("esoTalk.meta.keywords")) ? $k : implode(",", $keywords))."'>");
+			// list($lastKeyword) = array_splice($keywords, count($keywords) - 1, 1);
+			// $this->addToHead("<meta name='description' content='".sanitizeHTML(($d = C("esoTalk.meta.description")) ? $d
+			// 	: sprintf(T("forumDescription"), C("esoTalk.forumTitle"), implode(", ", $keywords), $lastKeyword))."'>");
 
 			// If this is not technically the homepage (if it's a search page) the we don't want it to be indexed.
-			if ($searchString) $this->addToHead("<meta name='robots' content='noindex, noarchive'>");
+			// if ($searchString) $this->addToHead("<meta name='robots' content='noindex, noarchive'>");
 
 			// Add JavaScript language definitions and variables.
-			$this->addJSLanguage("Starred", "Unstarred", "gambit.member", "gambit.more results", "Filter conversations", "Jump to last");
-			$this->addJSVar("searchUpdateInterval", C("esoTalk.search.updateInterval"));
-			$this->addJSVar("currentSearch", $searchString);
-			$this->addJSVar("currentChannels", $currentChannels);
-			$this->addJSFile("js/lib/jquery.cookie.js");
-			$this->addJSFile("js/autocomplete.js");
-			$this->addJSFile("js/search.js");
+			// $this->addJSLanguage("Starred", "Unstarred", "gambit.member", "gambit.more results", "Filter conversations", "Jump to last");
+			// $this->addJSVar("searchUpdateInterval", C("esoTalk.search.updateInterval"));
+			// $this->addJSVar("currentSearch", $searchString);
+			// $this->addJSVar("currentChannels", $currentChannels);
+			// $this->addJSFile("js/lib/jquery.cookie.js");
+			// $this->addJSFile("js/autocomplete.js");
+			// $this->addJSFile("js/search.js");
 
 			// Add an array of channels in the form slug => id for the JavaScript to use.
-			$channels = array();
-			foreach ($channelInfo as $id => $c) $channels[$id] = $c["slug"];
-			$this->addJSVar("channels", $channels);
+			// $channels = array();
+			// foreach ($channelInfo as $id => $c) $channels[$id] = $c["slug"];
+			// $this->addJSVar("channels", $channels);
 
 			// Get a bunch of statistics...
-			$queries = array(
-				"post" => ET::SQL()->select("COUNT(*)")->from("post")->get(),
-				"conversation" => ET::SQL()->select("COUNT(*)")->from("conversation")->get(),
-				"member" => ET::SQL()->select("COUNT(*)")->from("member")->get()
-			);
-			$sql = ET::SQL();
-			foreach ($queries as $k => $query) $sql->select("($query) AS $k");
-			$stats = $sql->exec()->firstRow();
+			// $queries = array(
+			// 	"post" => ET::SQL()->select("COUNT(*)")->from("post")->get(),
+			// 	"conversation" => ET::SQL()->select("COUNT(*)")->from("conversation")->get(),
+			// 	"member" => ET::SQL()->select("COUNT(*)")->from("member")->get()
+			// );
+			// $sql = ET::SQL();
+			// foreach ($queries as $k => $query) $sql->select("($query) AS $k");
+			// $stats = $sql->exec()->firstRow();
 
-			// ...and show them in the footer.
-			foreach ($stats as $k => $v) {
-				$stat = Ts("statistic.$k", "statistic.$k.plural", number_format($v));
-				if ($k == "member") $stat = "<a href='".URL("members")."'>$stat</a>";
-				$this->addToMenu("statistics", "statistic-$k", $stat, array("before" => "statistic-online"));
-			}
+			// // ...and show them in the footer.
+			// foreach ($stats as $k => $v) {
+			// 	$stat = Ts("statistic.$k", "statistic.$k.plural", number_format($v));
+			// 	if ($k == "member") $stat = "<a href='".URL("members")."'>$stat</a>";
+			// 	$this->addToMenu("statistics", "statistic-$k", $stat, array("before" => "statistic-online"));
+			// }
 
-			$this->render("conversations/index");
+			$this->layout->content = View::make('conversations/index', $data)->with('channel_tabs', $channels_view);
+
 
 		}
 
-		// For a view, just render the results.
-		elseif ($this->responseType === RESPONSE_TYPE_VIEW) {
-			$this->render("conversations/results");
+		else
+		{
+			$this->layout->results = View::make('conversations/results', $data);
+			$this->layout->channels = $channels_view;
 		}
 
-		// For ajax, render the results, and also pass along the channels view.
-		elseif ($this->responseType === RESPONSE_TYPE_AJAX) {
-			$this->json("channels", $this->getViewContents("channels/tabs", $this->data));
-			$this->render("conversations/results");
-		}
-
-		// For json, output the results as a json object.
-		elseif ($this->responseType === RESPONSE_TYPE_JSON) {
-			$this->json("results", $results);
-			$this->render();
-		}
 	}
 
 
 	/**
-	 * Given the channel slug from a request, work out which channels are selected, whether or not to include
-	 * descendant channels in the results, and construct a full list of channel IDs to consider when getting the
-	 * list a conversations.
+	 * Given the channel slug from a request, work out which channels are
+	 * selected, whether or not to include descendant channels in the
+	 * results, and construct a full list of channel IDs to consider when
+	 * getting the list of conversations.
 	 *
 	 * @param string $channelSlug The channel slug from the request.
 	 * @return array An array containing:
@@ -231,65 +263,82 @@ class Conversations_Controller extends Base_Controller {
 	 * 		2 => the full list of channel IDs to consider (including descendant channels of selected channels.)
 	 * 		3 => whether or not descendant channels are being included.
 	 */
-	protected function getSelectedChannels($channelSlug = "")
+	protected function get_selected_channels($channels, $channel_slug = "")
 	{
-		// Get a list of all viewable channels.
-		$channelInfo = ET::channelModel()->get();
-
 		// Get a list of the currently selected channels.
-		$currentChannels = array();
-		$includeDescendants = true;
+		$selected_channels = array();
+		$include_descendants = true;
 
-		if (!empty($channelSlug)) {
-			$channels = explode(" ", $channelSlug);
+		if (!empty($channel_slug))
+		{
+			$channel_slugs = explode(" ", $channel_slug);
 
 			// If the first channel is empty (ie. the URL is conversations/+channel-slug), set a flag
 			// to turn off the inclusion of descendant channels when considering conversations.
-			if ($channels[0] == "") {
-				$includeDescendants = false;
-				array_shift($channels);
+			if ($channel_slugs[0] == "") {
+				$include_descendants = false;
+				array_shift($channel_slugs);
 			}
 
 			// Go through the channels and add their IDs to the list of current channels.
-			foreach ($channels as $channel) {
-				foreach ($channelInfo as $id => $c) {
-					if ($c["slug"] == $channel) {
-						$currentChannels[] = $id;
+			foreach ($channel_slugs as $slug)
+			{
+				foreach ($channels as $channel)
+				{
+					if ($channel->slug == $slug)
+					{
+						$selected_channels[] = $channel->id;
 						break;
 					}
 				}
 			}
 		}
 
+		$member_channels = Auth::user()->channels;
+
 		// Get an array of channel IDs to consider when getting the list of conversations.
 		// If we're not including descendants, this is the same as the list of current channels.
-		if (!$includeDescendants) {
-			$channelIds = $currentChannels;
+		if (!$include_descendants)
+		{
+			$channel_ids = $selected_channels;
 		}
 
 		// Otherwise, loop through all the channels and add IDs of descendants. Make sure we don't include
 		// any channels which the user has unsubscribed to.
-		else {
-			$channelIds = array();
-			foreach ($currentChannels as $id) {
-				$channelIds[] = $id;
-				$rootUnsubscribed = !empty($channelInfo[$id]["unsubscribed"]);
-				foreach ($channelInfo as $channel) {
-					if ($channel["lft"] > $channelInfo[$id]["lft"] and $channel["rgt"] < $channelInfo[$id]["rgt"] and (empty($channel["unsubscribed"]) or $rootUnsubscribed))
-						$channelIds[] = $channel["channelId"];
+		else
+		{
+			$channel_ids = array();
+			
+			foreach ($selected_channels as $id)
+			{
+				$channel_ids[] = $id;
+
+				// $root_unsubscribed = !empty($member_channels[$id]->unsubscribed);
+
+				foreach ($channels as $channel)
+				{
+					if ($channel->lft > $channels[$id]->lft and $channel->rgt < $channels[$id]->rgt and empty($member_channels[$channel->id]->unsubscribed))
+					{
+						$channel_ids[] = $channel->id;
+					}
 				}
 			}
 		}
 
 		// If by now we don't have any channel IDs, we must be viewing "all channels." In this case,
 		// add all the channels.
-		if (empty($channelIds)) {
-			foreach ($channelInfo as $id => $channel) {
-				if (empty($channel["unsubscribed"])) $channelIds[] = $id;
+		if (empty($channel_ids))
+		{
+			foreach ($channels as $id => $channel)
+			{
+				if (empty($member_channels[$id]->unsubscribed))
+				{
+					$channel_ids[] = $id;
+				}
 			}
 		}
 
-		return array($channelInfo, $currentChannels, $channelIds, $includeDescendants);
+		return array($selected_channels, $channel_ids, $include_descendants);
 	}
 
 

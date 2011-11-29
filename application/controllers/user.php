@@ -10,6 +10,8 @@
  */
 class User_Controller extends Base_Controller {
 
+	public $restful = true;
+
 	/**
 	 * Set up filters for actions within this controller.
 	 */
@@ -18,7 +20,7 @@ class User_Controller extends Base_Controller {
 		parent::__construct();
 
 		// Set up a filter to kick out authorised users.
-		$this->filter('before', 'no_auth')->except('logout');
+		// $this->filter('before', 'no_auth')->except('logout');
 
 		$this->filter('before', 'csrf')->on('post');
 	}
@@ -26,71 +28,70 @@ class User_Controller extends Base_Controller {
 	/**
 	 * Show the login sheet and handle input from the login form.
 	 */
-	public function action_login()
-	{		
+	public function get_login()
+	{
+		$this->layout->body = View::make('user/login');
+		Page::body_class('sheetPage');
+	}
+
+	public function post_login()
+	{
 		// If the request is a POST request, attempt to log in using
 		// the built-in Laravel authentication system. If we fail, flash
 		// a message and redirect back to the login page.
-		if (Request::method() == 'POST')
+		if (Auth::attempt(Input::get('username'), Input::get('password'), Input::get('remember')))
 		{
-			if (Auth::attempt(Input::get('username'), Input::get('password'), Input::get('remember')))
+			// Check if the user has confirmed their email. If they
+			// haven't, we'll need to log them out and show a message.
+			if ( ! Auth::user()->confirmed_email)
 			{
-				// Check if the user has confirmed their email. If they
-				// haven't, we'll need to log them out and show a message.
-				if ( ! Auth::user()->confirmed_email)
+				Auth::logout();
+
+				$this->layout->body = View::of_message(array(
+					'title' => 'Error',
+					'message' => 'You have not yet confirmed your email address.'
+				));
+
+				return;
+			}
+
+			// If the login was successful, we either bind a 'success' 
+			// flag to the layout for json output on an AJAX request,
+			// or we just redirect to the return URI.
+			else
+			{
+				Event::trigger('login_success', $this);
+
+				if (Request::ajax())
 				{
-					Auth::logout();
-
-					$this->layout->body = View::of_message(array(
-						'title' => 'Error',
-						'message' => 'You have not yet confirmed your email address.'
-					));
-
-					return;
+					$this->layout->success = true;
 				}
-
-				// If the login was successful, we either bind a 'success' 
-				// flag to the layout for json output on an AJAX request,
-				// or we just redirect to the return URI.
 				else
 				{
-					Event::trigger('login_success', $this);
-
-					if (Request::ajax())
-					{
-						$this->layout->success = true;
-						return;
-					}
-					else
-					{
-						return Redirect::to(Input::get('return'));
-					}
+					return Redirect::to(Input::get('return'));
 				}
+			}
+		}
+		else
+		{
+			Page::flash_warning('The username/password combination you entered is invalid. Please try again.');
+			
+			if (Request::ajax())
+			{
+				$this->layout->success = false;
 			}
 			else
 			{
-				Page::flash('The username/password combination you entered is invalid. Please try again.', 'warning');
-				Page::flash_warning('Message');
+				return Redirect::to(Input::get('return'));
 			}
 		}
-
-		Page::data('key', 'val');
-		Page::navigate('conversation/1', 'conversation', URL::to_conversation());
-		Page::canonical_url(URL::to_conversation());
-
-		// Menu::add_to('user', 'conversation', HTML::link_to_conversation(), 0);
-		// Menu::add_separator_to('user', 'conversation');
-
-		// Menu::add_to_user('conversation', 'whatever');
-
-		$this->layout->body = View::make('user/login');
 	}
 
 
 	/**
 	 * Log the user out and redirect.
 	 */
-	public function action_logout()
+	public function get_logout()
 	{
 		Auth::logout();
 

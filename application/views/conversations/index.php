@@ -2,8 +2,6 @@
 // Copyright 2011 Toby Zerner, Simon Zerner
 // This file is part of esoTalk. Please see the included license file for usage information.
 
-if (!defined("IN_ESOTALK")) exit;
-
 /**
  * Displays the conversation list, including the filter area (search form, gambits, and channel breadcrumb.)
  *
@@ -11,31 +9,33 @@ if (!defined("IN_ESOTALK")) exit;
  */
 ?>
 
-<div id='conversationsFilter' class='bodyHeader'>
+<div id="conversationsFilter" class="bodyHeader">
 
-<form class='search big' id='search' action='<?php echo URL("conversations/".$data["channelSlug"]); ?>' method='get'>
+<?php echo Form::open(null, 'get', array('class' => 'search big', 'id' => 'search')); ?>
 <fieldset>
-<input name='search' type='text' class='text' value='<?php echo $data["searchString"]; ?>' spellcheck='false' placeholder='<?php echo T("Filter conversations..."); ?>'/>
-<a class='control-reset' href='<?php echo URL("conversations/".$data["channelSlug"]); ?>'>x</a>
+<?php echo Form::text('search', $search_string, array('spellcheck' => 'false', 'placeholder' => T('Filter conversations...'))); ?>
+<?php echo HTML::link_to_conversations('x', array($channel_slug), array('class' => 'control-reset')); ?>
 </fieldset>
-</form>
+<?php echo Form::close(); ?>
 
-<ul id='channels' class='channels tabs'>
-<li><a href='<?php echo URL("channels"); ?>' class='channel-list' data-channel='list' title='<?php echo T("Channel List"); ?>'><?php echo T("Channel List"); ?></a></li>
-<?php $this->renderView("channels/tabs", $data); ?>
+<ul id="channels" class="channels tabs">
+<li><?php echo HTML::link_to_channels(('Channel List'), array(), array('class' => 'channel-list', 'title' => ('Channel List'))); ?></li>
+<?php echo $channel_tabs; ?>
 </ul>
 
-<div id='gambits'>
-<p class='help'><?php echo T("message.gambitsHelp"); ?></p>
+<div id="gambits">
+<p class="help"><?php echo T('message.gambitsHelp'); ?></p>
 <?php
-$linkPrefix = "conversations/".$data["channelSlug"]."/?search=".urlencode(((!empty($data["searchString"]) ? $data["searchString"]." + " : "")));
-ksort($data["gambits"]);
-foreach ($data["gambits"] as $k => $v)
-	echo "<a href='".URL($linkPrefix.$k)."' class='$v'>$k</a>\n";
-?></div>
+$url_prefix = URL::to_conversations(array($channel_slug)).'?search='.urlencode(!empty($search_string) ? $search_string.' + ' : '');
+ksort($gambits);
+foreach ($gambits as $gambit => $class):
+	echo HTML::link($url_prefix.$gambit, $gambit, array('class' => $class));
+endforeach;
+?>
+</div>
 
 </div>
 
-<div id='conversations'>
-<?php $this->renderView("conversations/results", $data); ?>
+<div id="conversations">
+<?php echo View::make('conversations/results', compact('conversations', 'show_view_more_link')); ?>
 </div>

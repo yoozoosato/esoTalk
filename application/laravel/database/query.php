@@ -96,7 +96,7 @@ class Query {
 	 */
 	public function __construct(Connection $connection, Grammars\Grammar $grammar, $table)
 	{
-		$this->from = $table;
+		$this->from = $connection->prefix().$table;
 		$this->grammar = $grammar;
 		$this->connection = $connection;
 	}
@@ -120,7 +120,14 @@ class Query {
 	 */
 	public function select($columns = array('*'))
 	{
-		$this->selects = (array) $columns;
+		$columns = (array) $columns;
+		
+		foreach ($columns as &$column)
+		{
+			if (strpos($column, '.') !== false) $column = $this->connection->prefix().$column;
+		}
+		
+		$this->selects = $columns;
 		return $this;
 	}
 
@@ -136,6 +143,12 @@ class Query {
 	 */
 	public function join($table, $column1, $operator, $column2, $type = 'INNER')
 	{
+		$table = $this->connection->prefix().$table;
+
+		if (strpos($column1, '.') !== false) $column1 = $this->connection->prefix().$column1;
+
+		if (strpos($column2, '.') !== false) $column2 = $this->connection->prefix().$column2;
+
 		$this->joins[] = compact('type', 'table', 'column1', 'operator', 'column2');
 
 		return $this;
@@ -206,6 +219,8 @@ class Query {
 	public function where($column, $operator, $value, $connector = 'AND')
 	{
 		$type = 'where';
+
+		if (strpos($column, '.') !== false) $column = $this->connection->prefix().$column;
 
 		$this->wheres[] = compact('type', 'column', 'operator', 'value', 'connector');
 

@@ -609,7 +609,7 @@ if(jQuery.isFunction(size)){return this.each(function(i){var self=jQuery(this);s
 if(jQuery.isWindow(elem)){var docElemProp=elem.document.documentElement["client"+name],body=elem.document.body;return elem.document.compatMode==="CSS1Compat"&&docElemProp||body&&body["client"+name]||docElemProp;}else if(elem.nodeType===9){return Math.max(elem.documentElement["client"+name],elem.body["scroll"+name],elem.documentElement["scroll"+name],elem.body["offset"+name],elem.documentElement["offset"+name]);}else if(size===undefined){var orig=jQuery.css(elem,type),ret=parseFloat(orig);return jQuery.isNumeric(ret)?ret:orig;}else{return this.css(type,typeof size==="string"?size:size+"px");}};});window.jQuery=window.$=jQuery;})(window);jQuery.easing['jswing']=jQuery.easing['swing'];jQuery.extend(jQuery.easing,{def:'easeOutQuad',swing:function(x,t,b,c,d){return jQuery.easing[jQuery.easing.def](x,t,b,c,d);},easeOutQuad:function(x,t,b,c,d){return-c*(t/=d)*(t-2)+b;}});if(!Array.indexOf){Array.prototype.indexOf=function(obj){for(var i=0;i<this.length;i++){if(this[i]==obj){return i;}}
 return-1;}}
 function T(string)
-{return typeof ET.language[string]=="undefined"?string:ET.language[string];}
+{return typeof ET[string]=="undefined"?string:ET[string];}
 function desanitize(value)
 {return value.replace(/\u00a0|&nbsp;/gi," ").replace(/&gt;/gi,">").replace(/&lt;/gi,"<").replace(/&amp;/gi,"&");}
 var loadingOverlays={};function createLoadingOverlay(id,coverElementWithId)

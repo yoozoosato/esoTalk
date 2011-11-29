@@ -72,7 +72,7 @@ if (!Array.indexOf){
 // a controller to make a definition available in ET.language.
 function T(string)
 {
-	return typeof ET.language[string] == "undefined" ? string : ET.language[string];
+	return typeof ET[string] == "undefined" ? string : ET[string];
 }
 
 // Desanitize an HTML string, converting HTML entities back into their ASCII equivalent.

@@ -20,7 +20,7 @@ class Plugin_BBCode extends Plugin {
 
 		Event::attach_login_form_after(function()
 		{
-			
+			// echo 'login_form_after';
 		});
 
 

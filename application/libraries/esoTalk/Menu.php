@@ -10,35 +10,80 @@
  */
 class Menu {
 
+	/**
+	 * All of the instantiated menu containers.
+	 *
+	 * @var array
+	 */
+	protected static $containers = array();
 
 	/**
+	 * Get a menu container instance.
+	 *
+	 * @param  string            $container
+	 * @return Menu_Container
+	 */
+	public static function container($container)
+	{
+		if ( ! isset(static::$containers[$container]))
+		{
+			static::$containers[$container] = new Menu_Container($container);
+		}
+
+		return static::$containers[$container];
+	}
+
+	/**
+	 * Magic Method for calling methods on menu containers.
+	 */
+	public static function __callStatic($method, $parameters)
+	{
+		if (strpos($method, '_to') !== false)
+		{
+			list($method, $container) = explode('_to', $method);
+			$container = ltrim($container, '_');
+		}
+		elseif (strpos($method, 'get_') !== false)
+		{
+			list($method, $container) = explode('_', $method);
+		}
+
+		$container = $container ?: array_shift($parameters);
+
+		return call_user_func_array(array(static::container($container), $method), $parameters);
+	}
+
+}
+
+
+class Menu_Container {
+	
+	/**
 	 * A list of menu items.
+	 * 
 	 * @var array
 	 */
 	protected $items = array();
 
-
 	/**
 	 * A list of menu item keys to highlight.
+	 * 
 	 * @var array
 	 */
 	protected $highlight = array();
 
-
 	/**
-	 * Add an item to this menu collection.
+	 * Add an item to this menu container.
 	 *
-	 * @param string $id The name of the menu item.
-	 * @param string $html The HTML content of the menu item.
-	 * @param mixed $position The position to put the menu item, relative to other menu items.
-	 * @see addToArrayString
+	 * @param  string $id       The name of the menu item.
+	 * @param  string $html     The HTML content of the menu item.
+	 * @param  mixed  $position The position to put the menu item, relative to other menu items.
 	 * @return void
 	 */
-	public function add($id, $html, $position = false)
+	public function add($key, $value, $position = false)
 	{
-		addToArrayString($this->items, $id, $html, $position);
+		Arr::insert_with_key($this->items, $key, $value, $position);
 	}
-
 
 	/**
 	 * Add a separator item to this menu collection.
@@ -47,11 +92,10 @@ class Menu {
 	 * @see addToArrayString
 	 * @return void
 	 */
-	public function separator($position = false)
+	public function add_separator($position = false)
 	{
-		addToArrayString($this->items, count($this->items) + 1, "separator", $position);
+		Arr::insert($this->items, 'separator', $position);
 	}
-
 
 	/**
 	 * Highlight a particular menu item.
@@ -59,11 +103,10 @@ class Menu {
 	 * @param string $id The name of the menu item to highlight.
 	 * @return void
 	 */
-	public function highlight($id)
+	public function highlight($key)
 	{
-		$this->highlight[] = $id;
+		$this->highlight[] = $key;
 	}
-
 
 	/**
 	 * Get the contents of the menu as a string of <li> elements.
@@ -72,14 +115,22 @@ class Menu {
 	 */
 	public function get()
 	{
-		$return = "";
-		foreach ($this->items as $k => $v) {
-			if ($v == "separator") $return .= "<li class='sep'></li>\n";
-			else $return .= "<li class='item-$k".(in_array($k, $this->highlight) ? " selected" : "")."'>$v</li>\n";
+		$return = '';
+
+		foreach ($this->items as $k => $v)
+		{
+			if ($v == 'separator')
+			{
+				$return .= '<li class="sep"></li>'.PHP_EOL;
+			}
+			else
+			{
+				$return .= '<li class="item-'.$k.(in_array($k, $this->highlight) ? ' selected' : '').'">'.$v.'</li>'.PHP_EOL;
+			}
 		}
+
 		return $return;
 	}
-
 
 	/**
 	 * Get the number of menu items collected in this menu.
@@ -90,17 +141,5 @@ class Menu {
 	{
 		return count($this->items);
 	}
-
-	public static function __callStatic($method, $parameters)
-	{
-		
-	}
-
-}
-
-
-class Menu_Container {
-	
-
 
 }

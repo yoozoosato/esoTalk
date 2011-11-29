@@ -46,8 +46,23 @@ return $routes + array(
 
 	'GET /' => 'conversations@index',
 
+	'GET /conversations/(:any?)' => array('name' => 'conversations', 'conversations@index'),
+
 	'GET /user/login' => array('name' => 'login', 'user@login'),
+	'GET /user/join' => array('name' => 'join', 'user@join'),
 
 	'GET /(:num)/(:any?)' => array('name' => 'conversation'),
+
+	'GET /conversation/post/(:num)' => array('name' => 'post'),
+
+	'GET /member/(:any)' => array('name' => 'member'),
+
+	'GET /members' => array('name' => 'members'),
+
+	'GET /channels' => array('name' => 'channels'),
+
+	'GET /settings' => array('name' => 'settings'),
+
+	'GET /admin/(:any)' => array('name' => 'admin'),
 
 );

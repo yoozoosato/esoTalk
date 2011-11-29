@@ -147,6 +147,7 @@ return array(
 		'Event'      => 'esoTalk\\Event',
 		'Page'       => 'esoTalk\\Page',
 		'Menu'       => 'esoTalk\\Menu',
+		'Search'     => 'esoTalk\\Search',
 	),
 
 );

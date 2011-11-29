@@ -35,7 +35,7 @@ class Asset_Container extends \Laravel\Asset_Container {
 
 		$extension = $group == 'style' ? 'css' : 'js';
 
-		if (count($assets) > 1 and C('esoTalk.aggregate_'.$extension, true))
+		if (count($assets) > 1 and C('esoTalk.aggregate_'.$extension))
 		{
 			$files = static::aggregate($assets, $extension);
 		}

@@ -2,32 +2,29 @@
 // Copyright 2011 Toby Zerner, Simon Zerner
 // This file is part of esoTalk. Please see the included license file for usage information.
 
-if (!defined("IN_ESOTALK")) exit;
-
 /**
  * Displays a single conversation row in the context of a list of results.
  *
  * @package esoTalk
  */
 
-$conversation = $data["conversation"];
-
 // Work out the class name to apply to the row.
-$className = "channel-".$conversation["channelId"];
-if ($conversation["starred"]) $className .= " starred";
-if ($conversation["unread"] and ET::$session->user) $className .= " unread";
-if ($conversation["startMemberId"] == ET::$session->user) $className .= " mine";
+$className = "channel-".$conversation->channel_id;
+if ($conversation->starred) $className .= " starred";
+if ($conversation->unread and Auth::user()->id) $className .= " unread";
+if ($conversation->start_member_id == Auth::user()->id) $className .= " mine";
 
 ?>
-<li id='c<?php echo $conversation["conversationId"]; ?>' class='<?php echo $className; ?>'>
-<?php if (ET::$session->user): ?>
-<div class='col-star'><?php echo star($conversation["conversationId"], $conversation["starred"]); ?></div>
+<li id='c<?php echo $conversation->id; ?>' class='<?php echo $className; ?>'>
+<?php if (Auth::check()): ?>
+<div class='col-star'><?php// echo star($conversation["conversationId"], $conversation["starred"]); ?></div>
 <?php endif; ?>
 <div class='col-conversation'><?php
-$conversationURL = conversationURL($conversation["conversationId"], $conversation["title"]);
+// $conversationURL = conversationURL($conversation["conversationId"], $conversation["title"]);
+$conversationURL = URL::to_conversation(array($conversation->id, URL::slug($conversation->title)));
 
 // Output the conversation title, highlighting search keywords.
-echo "<strong class='title'><a href='".URL($conversationURL)."'>".highlight(sanitizeHTML($conversation["title"]), ET::$session->get("highlight"))."</a></strong> ";
+echo "<strong class='title'><a href='".URL::to($conversationURL)."'>"./*highlight(sanitizeHTML($conversation["title"]), ET::$session->get("highlight")).*/"</a></strong> ";
 
 // Output the conversation's labels.
 echo "<span class='labels'>";

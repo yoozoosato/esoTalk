@@ -75,14 +75,14 @@ span.highlight {background:#fdef34; border:1px solid #fcef98; padding:1px 3px; b
 
 
 /* Generic areas */
-.area, .sheet {border:1px solid #e1e1e1; border-radius:3px; margin-bottom:20px; margin-top:0; background:#fbfbfb}
-.area {padding:15px}
+/*.area, .sheet {border:1px solid #e1e1e1; border-radius:3px; margin-bottom:20px; margin-top:0; background:#fbfbfb}
+*/.area {padding:15px}
 .area.help {padding-top:10px}
 .area h3 {font-size:110%}
 
 
 /* "Things" - distinguishable items such as posts, activity items, plugins, and skins. */
-.thing {border:1px solid #ccc; border-width:1px; border-style:solid; border-radius:3px; background:#fff; -webkit-box-shadow:0 1px 1px rgba(0, 0, 0, 0.08); box-shadow:0 1px 1px rgba(0, 0, 0, 0.08); position:relative}
+.thing, .area, .sheet {border:1px solid #ccc; border-width:1px; border-style:solid; border-radius:3px; background:#fff; -webkit-box-shadow:0 1px 1px rgba(0, 0, 0, 0.08); box-shadow:0 1px 1px rgba(0, 0, 0, 0.08); position:relative}
 .thing:before {border-color:#ccc}
 .thing:after {border-color:#fff}
 
@@ -96,7 +96,7 @@ span.highlight {background:#fdef34; border:1px solid #fcef98; padding:1px 3px; b
 
 
 /* Icons */
-[class*=icon-], [class*=control-], .online {display:inline-block; background:url(icons.png) no-repeat; text-indent:-9999px}
+[class*=icon-], [class*=control-], .online {display:inline-block; background:url(../img/icons.png) no-repeat; text-indent:-9999px}
 
 .icon-mobile {background-position:-20px -0px; width:16px; height:16px}
 .icon-tick {background-position:-20px -543px; width:10px; height:8px}

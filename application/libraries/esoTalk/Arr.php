@@ -2,66 +2,45 @@
 
 class Arr extends \Laravel\Arr {
 	
-	/**
-	 * Insert value(s) into an array, mostly an array_splice alias
-	 * WARNING: original array is edited by reference, only boolean success is returned
-	 *
-	 * @param   array        the original array (by reference)
-	 * @param   array|mixed  the value(s) to insert, if you want to insert an array it needs to be in an array itself
-	 * @param   int          the numeric position at which to insert, negative to count from the end backwards
-	 * @return  bool         false when array shorter then $pos, otherwise true
-	 */
-	public static function insert(array &$original, $value, $pos)
+	public static function insert(&$array, $value, $pos = false)
 	{
-		if (count($original) < abs($pos))
+		if ($pos === false)
 		{
-			\Error::notice('Position larger than number of elements in array in which to insert.');
-			return false;
+			$array[] = $value;
+		}
+		else
+		{
+			if ( ! is_int($pos))
+			{
+				$pos = array_search($pos, array_keys($array), true) + 1;
+			}
+
+			array_splice($array, $pos, 0, array($value));
 		}
 
-		array_splice($original, $pos, 0, $value);
 		return true;
 	}
 
-	/**
-	 * Insert value(s) into an array after a specific key
-	 * WARNING: original array is edited by reference, only boolean success is returned
-	 *
-	 * @param   array        the original array (by reference)
-	 * @param   array|mixed  the value(s) to insert, if you want to insert an array it needs to be in an array itself
-	 * @param   string|int   the key after which to insert
-	 * @return  bool         false when key isn't found in the array, otherwise true
-	 */
-	public static function insert_after_key(array &$original, $value, $key)
+	public static function insert_with_key(&$array, $key, $value, $pos = false)
 	{
-		$pos = array_search($key, array_keys($original));
+		$keys = array_keys($array);
+		$values = array_values($array);
+
 		if ($pos === false)
 		{
-			\Error::notice('Unknown key after which to insert the new value into the array.');
-			return false;
+			$pos = count($keys);
 		}
-
-		return static::insert($original, $value, $pos + 1);
-	}
-
-	/**
-	 * Insert value(s) into an array after a specific value (first found in array)
-	 *
-	 * @param   array        the original array (by reference)
-	 * @param   array|mixed  the value(s) to insert, if you want to insert an array it needs to be in an array itself
-	 * @param   string|int   the value after which to insert
-	 * @return  bool         false when value isn't found in the array, otherwise true
-	 */
-	public static function insert_after_value(array &$original, $value, $search)
-	{
-		$key = array_search($search, $original);
-		if ($key === false)
+		elseif ( ! is_int($pos))
 		{
-			\Error::notice('Unknown value after which to insert the new value into the array.');
-			return false;
+			$pos = array_search($pos, $keys, true) + 1;
 		}
 
-		return static::insert_after_key($original, $value, $key);
+		static::insert($keys, $key, $pos);
+		static::insert($values, $value, $pos);
+
+		$array = array_combine($keys, $values);
+
+		return true;
 	}
 
 }
